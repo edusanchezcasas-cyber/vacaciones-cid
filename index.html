@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vacaciones Paralegal Procesal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* =====================================================================
+   CONFIGURACIÓN — firebaseConfig del proyecto "Vacaciones" (vacaciones-ea41c)
+   (Firebase Console → Configuración del proyecto → Tus apps → SDK config).
+   Mientras diga PEGA_AQUI, la página funciona en MODO DEMOSTRACIÓN (no guarda).
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAdJgLfgbhcpdpi5nfKxsIPnL_zrbd_jCs",
+  authDomain: "vacaciones-ea41c.firebaseapp.com",
+  projectId: "vacaciones-ea41c",
+  storageBucket: "vacaciones-ea41c.firebasestorage.app",
+  messagingSenderId: "750946424068",
+  appId: "1:750946424068:web:dae3532853a0e0a5722c51"
+};
+const EDITOR_EMAIL = "esanchez@vinateatoyama.com";   // única cuenta que puede editar
+const BUILD = "VAC-2026-10-15-1";
+</script>
+<style>
+/* Layout: barra negra estilo MyBiG, consultor de fechas arriba, resumen, pestañas con el Gantt como pieza central. */
+:root{
+  --bg:#f7f8fb; --card:#ffffff; --fg:#181c32; --muted:#7e8299; --line:#ebedf3; --soft:#f3f6f9;
+  --nav:#000000;
+  --teal:#1BC5BD; --teal-soft:#c9f7f5; --teal-ink:#0e7f7a;
+  --amber:#FFA800; --amber-soft:#fff4de; --amber-ink:#9a6500;
+  --red:#F64E60; --red-soft:#ffe2e5; --red-ink:#b3172a;
+  --purple:#8950FC; --purple-soft:#eee5ff;
+  --blue:#3699FF;
+  --weekend:#eef0f5; --holiday:#e4e6ef;
+  --shadow:0 0 20px rgba(82,63,105,.06);
+  --f-ui:"Poppins",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#151521; --card:#1e1e2d; --fg:#e8e9f1; --muted:#9899ac; --line:#2b2b40; --soft:#25253a;
+  --teal-soft:#1c3238; --teal-ink:#5fe3dc; --amber-soft:#392f28; --amber-ink:#ffc355;
+  --red-soft:#3a2434; --red-ink:#ff8593; --purple-soft:#2f264f;
+  --weekend:#232335; --holiday:#2b2b42; --shadow:none; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:13px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+.nav{background:var(--nav);color:#fff;padding:14px max(16px,env(safe-area-inset-right)) 14px max(16px,env(safe-area-inset-left))}
+.nav-in{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;margin-right:auto}
+.brand b{font-size:16px;font-weight:600}
+.brand span{font-size:11px;opacity:.65;letter-spacing:.6px;text-transform:uppercase}
+.who{font-size:12px;opacity:.8}
+.wrap{max-width:1400px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 48px max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:18px}
+
+.btn{border:0;border-radius:6px;padding:8px 14px;font-weight:500;cursor:pointer;background:var(--soft);color:var(--fg);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible,.tab:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn.primary{background:var(--teal);color:#fff}
+.btn.danger{background:var(--red-soft);color:var(--red-ink)}
+.btn.nav-b{background:rgba(255,255,255,.12);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:12px}
+.banner{border-radius:8px;padding:10px 14px;background:var(--amber-soft);color:var(--amber-ink);font-weight:500;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.stats{grid-template-columns:1fr}}
+.stat{background:var(--card);border-radius:10px;box-shadow:var(--shadow);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.stat .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:500}
+.stat .big{font-size:26px;font-weight:600;line-height:1.1}
+.stat .det{color:var(--muted);font-size:12px;min-height:18px}
+.stat.bad .big{color:var(--red)} .stat.ok .big{color:var(--teal)}
+
+.panel{background:var(--card);border-radius:10px;box-shadow:var(--shadow);min-width:0}
+.panel-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
+.panel-h h2{font-size:15px;font-weight:600;margin:0}
+.panel-b{padding:16px 18px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{border:0;background:transparent;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:500;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--teal-soft);color:var(--teal-ink)}
+.tab .cnt{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;margin-left:4px}
+
+.qrow{display:grid;grid-template-columns:minmax(150px,220px) minmax(140px,170px) minmax(140px,170px) 1fr;gap:12px;align-items:end}
+@media (max-width:760px){.qrow{grid-template-columns:1fr 1fr}}
+@media (max-width:420px){.qrow{grid-template-columns:1fr}}
+.qrow label,.frow label,.fl{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;min-width:0}
+.qrow label select,.qrow label input,.frow label input,.frow label select,.fl input,.fl select{text-transform:none;letter-spacing:0;font-size:13px;color:var(--fg);width:100%}
+.qcalc{color:var(--muted);font-size:12.5px;padding-bottom:8px}
+.qcalc b{color:var(--fg);font-family:var(--f-num);font-weight:500}
+
+.gtools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gtools .rng{font-weight:600;min-width:170px;text-align:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px;padding:10px 18px;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.gscroll{overflow-x:auto}
+.gantt{display:grid;font-size:11px;min-width:max-content}
+.gantt .nm{position:sticky;left:0;background:var(--card);z-index:2;padding:0 12px;display:flex;align-items:center;font-weight:500;font-size:12.5px;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gantt .mh{padding:6px 6px 2px;font-weight:600;border-left:1px solid var(--line);font-size:12px;text-transform:capitalize}
+.gantt .dh{text-align:center;color:var(--muted);padding:2px 0;font-family:var(--f-num);font-size:10px;line-height:1.25}
+.gantt .dh.td{color:var(--blue);font-weight:600}
+.gantt .c{height:30px;border-bottom:1px solid var(--line);position:relative}
+.gantt .c.we{background:var(--weekend)}
+.gantt .c.ho{background:repeating-linear-gradient(135deg,var(--holiday) 0 3px,transparent 3px 6px)}
+.gantt .c.bl{background:repeating-linear-gradient(45deg,var(--red-soft) 0 3px,transparent 3px 7px)}
+.gantt .c.m1{border-left:1px solid var(--line)}
+.gantt .c.td::after{content:"";position:absolute;inset:0 auto 0 50%;width:2px;background:var(--blue);opacity:.55}
+.gantt .c .b{position:absolute;inset:6px 0;cursor:pointer}
+.gantt .c .b.vac{background:var(--teal)} .gantt .c .b.cub{background:var(--amber)} .gantt .c .b.con{background:var(--red)}
+.gantt .c .b.st{border-top-left-radius:5px;border-bottom-left-radius:5px;margin-left:1px}
+.gantt .c .b.en{border-top-right-radius:5px;border-bottom-right-radius:5px;margin-right:1px}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+table.wide{min-width:820px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.pill.ok{background:var(--teal-soft);color:var(--teal-ink)} .pill.cub{background:var(--amber-soft);color:var(--amber-ink)}
+.pill.con{background:var(--red-soft);color:var(--red-ink)} .pill.now{background:var(--purple-soft);color:var(--purple)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input[type=date],input[type=text],input[type=number],input[type=email],input[type=password]{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+.muted{color:var(--muted)}
+
+.issues{display:flex;flex-direction:column;gap:10px}
+.issue{border-radius:8px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.issue.con{background:var(--red-soft)} .issue.avi{background:var(--amber-soft)}
+.issue .t{flex:1;min-width:220px} .issue .t b{display:block;margin-bottom:2px}
+.issue ul{margin:4px 0 0;padding-left:18px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+
+.check{border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.check.ok{background:var(--teal-soft);color:var(--teal-ink)} .check.cub{background:var(--amber-soft);color:var(--amber-ink)}
+.check.con{background:var(--red-soft);color:var(--red-ink)} .check.idle{background:var(--soft);color:var(--muted)}
+.check ul{margin:0;padding-left:18px}
+.sugs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* Criterios */
+.crit{display:flex;flex-direction:column;gap:14px}
+.person{border:1px solid var(--line);border-radius:10px}
+.person-h{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)}
+.person-h .nmi{font-weight:600;font-size:14px;min-width:150px}
+.person-h .meta{color:var(--muted);font-size:12px;margin-right:auto}
+.person-h input[type=text]{font-weight:600;width:180px}
+.ftable td{vertical-align:top}
+.ftable input[type=text]{width:100%}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;border-radius:14px;padding:2px 9px;cursor:pointer;font-size:11.5px;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.chip:disabled{cursor:default}
+.rules{font-size:12.5px;color:var(--muted);margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.gen{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:800px){.gen{grid-template-columns:1fr}}
+.box{border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.box h3{margin:0;font-size:13.5px;font-weight:600}
+
+.ov{position:fixed;inset:0;background:rgba(10,10,20,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px}
+.modal{background:var(--card);border-radius:12px;width:100%;max-width:660px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.modal .panel-b{display:flex;flex-direction:column;gap:14px}
+.modal .panel-h h2{margin-right:auto}
+.frow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:520px){.frow{grid-template-columns:1fr}}
+.calc{display:flex;gap:18px;flex-wrap:wrap;background:var(--soft);border-radius:8px;padding:10px 14px}
+.calc div{display:flex;flex-direction:column}
+.calc span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.calc b{font-family:var(--f-num);font-size:15px;font-weight:500}
+.mfoot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:14px 18px;border-top:1px solid var(--line)}
+.mfoot .sp{margin-right:auto}
+.ack{display:flex;gap:8px;align-items:center;font-size:12.5px}
+.memo{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fff;color:#000;font-family:Calibri,Arial,sans-serif;font-size:13px;overflow-x:auto}
+.memo table{border-collapse:collapse;min-width:520px}
+.memo th,.memo td{border:1px solid #999;padding:3px 6px;font-size:12px;color:#000;text-transform:none;letter-spacing:0}
+.memo th{background:#dbe5f1;font-weight:700;text-align:center}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:60;font-weight:500}
+footer{text-align:center;color:var(--muted);font-size:11px;padding-bottom:24px}
+.linkb{border:0;background:none;color:var(--muted);font-size:11px;text-decoration:underline;cursor:pointer;padding:0}
+.modehint{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <div class="brand"><b>Vacaciones · Paralegal Procesal</b><span>CID · Vinatea &amp; Toyama</span></div>
+    <span class="who" id="who"></span>
+    <button class="btn nav-b" id="btnExport" type="button">Exportar Excel</button>
+    <button class="btn nav-b" id="btnLogout" type="button" hidden>Salir</button>
+    <button class="btn primary" id="btnNew" type="button" hidden>+ Registrar vacaciones</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="panel" aria-labelledby="qT">
+    <div class="panel-h"><h2 id="qT">Prueba tus fechas</h2><span class="muted" id="qHint">Elige tu nombre y unas fechas tentativas: te dice si están libres, con quién se cruzan y si tendrías cobertura. No se guarda nada; las vacaciones las registra Edu.</span></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:12px">
+      <div class="qrow">
+        <label>¿Quién?<select id="qP"></select></label>
+        <label>Desde<input type="date" id="qD"></label>
+        <label>Hasta<input type="date" id="qH"></label>
+        <div class="qcalc" id="qCalc"></div>
+      </div>
+      <div id="qRes"></div>
+      <div class="sugs" id="qActs" hidden>
+        <button class="btn sm" type="button" id="qSug">Sugerir fechas libres del mismo largo</button>
+        <button class="btn sm primary" type="button" id="qReg" hidden>Registrar este periodo</button>
+      </div>
+      <div class="sugs" id="qSugs"></div>
+    </div>
+  </section>
+
+  <section class="stats" aria-label="Resumen">
+    <div class="stat"><span class="lbl">De vacaciones hoy</span><span class="big num" id="stHoy">–</span><span class="det" id="stHoyD"></span></div>
+    <div class="stat"><span class="lbl">Salidas próximos 30 días</span><span class="big num" id="stProx">–</span><span class="det" id="stProxD"></span></div>
+    <div class="stat" id="stConBox"><span class="lbl">Cruces sin cobertura</span><span class="big num" id="stCon">–</span><span class="det" id="stConD"></span></div>
+    <div class="stat" id="stSinBox"><span class="lbl">Sin reemplazo definido</span><span class="big num" id="stSin">–</span><span class="det" id="stSinD"></span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-cal" aria-selected="true" type="button">Calendario</button>
+        <button class="tab" role="tab" id="tab-per" aria-selected="false" type="button">Periodos</button>
+        <button class="tab" role="tab" id="tab-con" aria-selected="false" type="button">Cruces <span class="cnt" id="tabCnt" hidden>0</span></button>
+        <button class="tab" role="tab" id="tab-cri" aria-selected="false" type="button">Criterios y reemplazos</button>
+      </div>
+    </div>
+
+    <div id="view-cal">
+      <div class="panel-h">
+        <div class="gtools">
+          <button class="btn sm" id="gPrev" type="button" aria-label="Mes anterior">‹</button>
+          <span class="rng" id="gRange"></span>
+          <button class="btn sm" id="gNext" type="button" aria-label="Mes siguiente">›</button>
+          <button class="btn sm" id="gToday" type="button">Hoy</button>
+        </div>
+        <div class="gtools" style="margin-left:auto">
+          <label class="muted" for="gSpan">Ver</label>
+          <select id="gSpan"><option value="1">1 mes</option><option value="3" selected>3 meses</option><option value="6">6 meses</option></select>
+        </div>
+      </div>
+      <div class="gscroll"><div class="gantt" id="gantt"></div></div>
+      <div class="legend">
+        <span><i style="background:var(--teal)"></i>Vacaciones sin cruce</span>
+        <span><i style="background:var(--amber)"></i>Cruce cubierto</span>
+        <span><i style="background:var(--red)"></i>Cruce sin cobertura</span>
+        <span><i style="background:repeating-linear-gradient(135deg,var(--holiday) 0 3px,var(--card) 3px 6px);border:1px solid var(--line)"></i>Feriado</span>
+        <span><i style="background:repeating-linear-gradient(45deg,var(--red-soft) 0 3px,var(--card) 3px 7px);border:1px solid var(--line)"></i>Fecha bloqueada</span>
+        <span><i style="background:var(--weekend);border:1px solid var(--line)"></i>Fin de semana</span>
+      </div>
+    </div>
+
+    <div id="view-per" hidden>
+      <div class="panel-h">
+        <div class="filters">
+          <select id="fPer" aria-label="Filtrar por persona"><option value="">Todas las personas</option></select>
+          <select id="fEst" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="con">Sin cobertura</option><option value="cub">Cruce cubierto</option><option value="ok">Sin cruce</option></select>
+        </div>
+        <span class="muted" style="margin-left:auto">Solo periodos vigentes y futuros</span>
+      </div>
+      <div class="tscroll"><table class="wide">
+        <thead><tr><th>Persona</th><th>Desde</th><th>Hasta</th><th>Retorno</th><th class="r">Calend.</th><th class="r">Hábiles</th><th>Lo cubren</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="perBody"></tbody>
+      </table></div>
+    </div>
+
+    <div id="view-con" hidden><div class="panel-b"><div class="issues" id="issues"></div></div></div>
+
+    <div id="view-cri" hidden>
+      <div class="panel-b crit">
+        <ul class="rules">
+          <li>Nadie puede salir a la vez que otra persona del equipo, salvo que <b>todas las funciones</b> de quien sale queden cubiertas por alguien que esté trabajando.</li>
+          <li>Si una función tiene varios responsables (ej. “Jemima / Camila”), basta con que uno esté trabajando.</li>
+          <li>Una persona sin funciones ni reemplazos definidos no puede cruzarse con nadie.</li>
+          <li>Los días cuentan por año calendario sobre 30 (D. Leg. 713). El saldo es referencial.</li>
+        </ul>
+        <div class="gen" id="gen"></div>
+        <div id="people" class="crit"></div>
+        <div id="addPBox"><button class="btn" id="btnAddP" type="button">+ Agregar persona</button></div>
+      </div>
+    </div>
+  </section>
+  <footer>Build <span id="build"></span> · <button type="button" id="btnLogin" class="linkb">Acceso administrador</button></footer>
+</main>
+
+<!-- Modal periodo -->
+<div class="ov" id="ov" hidden>
+  <form class="modal" id="form" autocomplete="off">
+    <div class="panel-h"><h2 id="fTitle">Registrar vacaciones</h2><button class="btn sm" type="button" id="fClose" aria-label="Cerrar">✕</button></div>
+    <div class="panel-b">
+      <div class="frow">
+        <label>Persona<select id="fP" required></select></label>
+        <label>Desde<input type="date" id="fD" required></label>
+        <label>Hasta<input type="date" id="fH" required></label>
+      </div>
+      <div class="calc">
+        <div><span>Calendario</span><b id="cCal">–</b></div>
+        <div><span>Hábiles</span><b id="cHab">–</b></div>
+        <div><span>Retorno</span><b id="cRet">–</b></div>
+      </div>
+      <div id="fCheck"></div>
+      <label class="fl">Nota<input type="text" id="fN" placeholder="Opcional"></label>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" type="button" id="fDel" hidden>Eliminar</button>
+      <button class="btn" type="button" id="fMemo" hidden>Ver memo</button>
+      <span class="sp"></span>
+      <label class="ack" id="fAckL" hidden><input type="checkbox" id="fAck"> Guardar aunque tenga cruce sin cobertura</label>
+      <button class="btn" type="button" id="fCancel">Cancelar</button>
+      <button class="btn primary" type="submit" id="fSave">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Modal memo -->
+<div class="ov" id="ovMemo" hidden>
+  <div class="modal" style="max-width:820px">
+    <div class="panel-h"><h2>Memo de vacaciones</h2><button class="btn sm" type="button" id="mClose" aria-label="Cerrar">✕</button></div>
+    <div class="panel-b">
+      <span class="muted">Cópialo y pégalo en el correo a Paralegal Procesal. La tabla mantiene el formato en Outlook.</span>
+      <div class="memo" id="memoBox"></div>
+    </div>
+    <div class="mfoot"><span class="sp"></span><button class="btn primary" type="button" id="mCopy">Copiar memo</button></div>
+  </div>
+</div>
+
+<!-- Modal login -->
+<div class="ov" id="ovLogin" hidden>
+  <form class="modal" id="loginForm" style="max-width:400px">
+    <div class="panel-h"><h2>Ingresar para editar</h2><button class="btn sm" type="button" id="lClose" aria-label="Cerrar">✕</button></div>
+    <div class="panel-b">
+      <label class="fl">Correo<input type="email" id="lEmail" required autocomplete="username"></label>
+      <label class="fl">Contraseña<input type="password" id="lPass" required autocomplete="current-password"></label>
+      <div id="lErr" class="check con" hidden></div>
+    </div>
+    <div class="mfoot"><span class="sp"></span><button class="btn primary" type="submit">Ingresar</button></div>
+  </form>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+// ---------- Datos iniciales (se cargan a Firestore la primera vez con el botón "Cargar datos iniciales") ----------
+const SEED={
+ equipo:{
+  edu:{nombre:"Edu",ingreso:"2020-01-04",notas:"",orden:1},
+  jose:{nombre:"Jose",ingreso:"2019-09-01",notas:"",orden:2},
+  alessandra:{nombre:"Alessandra",ingreso:"",notas:"",orden:3},
+  claudia:{nombre:"Claudia",ingreso:"2022-08-05",notas:"",orden:4},
+  nestor:{nombre:"Néstor",ingreso:"2023-04-10",notas:"",orden:5},
+  brando:{nombre:"Brando",ingreso:"2019-10-31",notas:"",orden:6},
+  joselin:{nombre:"Joselin",ingreso:"2024-02-01",notas:"Debe vacaciones desde el 15/09/2026",orden:7},
+  jemima:{nombre:"Jemima",ingreso:"2025-10-01",notas:"",orden:8},
+  camila:{nombre:"Camila",ingreso:"2025-10-01",notas:"",orden:9},
+  jimmy:{nombre:"Jimmy",ingreso:"",notas:"",orden:10}
+ },
+ funciones:[
+  ["jose","Todos los teams","Reporte de diligencias",["nestor"],"Martes / Máximo 14:00 pm."],
+  ["jose","Todos los teams","Reporte de diligencias (actualizado)",["nestor"],"Jueves / 12 pm."],
+  ["jose","Todos los teams","Reporte diario de tareas",["nestor"],"Diario / Máximo 16:00 pm."],
+  ["jose","Casilla TC","Revisar casilla del TC",["edu"],"Cuando llegue una notificación al correo"],
+  ["jose","Correos (Team Lagos / Estrella / Morales)","Respuesta de correos y coordinaciones",["jemima","camila"],"Diario"],
+  ["jose","Correos de casillas electrónicas","Revisar el correo y los enlaces de audiencias",["jemima","camila"],"Diario"],
+  ["jose","Cerro Verde","Envío de reporte (Notificaciones y Escritos)",["joselin"],"Diario"],
+  ["nestor","","Descarga de notificaciones de SINOE 108030 y 1692",["jimmy"],"3 veces al día"],
+  ["nestor","","Poner fecha a las notificaciones / poner en carpetas compartidas",["jimmy"],"3 veces al día"],
+  ["nestor","","Revisar sentencias",["jemima"],"3 veces al día"],
+  ["nestor","","Subir sentencias a Harvey y envío",["jose"],"3 veces al día"],
+  ["nestor","","Agendamiento de notificaciones de casilla y de Juanjo",["jemima"],"Diario"],
+  ["nestor","","Todos los reportes de notificaciones",["jimmy"],"3 veces al día"],
+  ["nestor","","Envío por correo de notificaciones sin registro, archivadas y devueltas al cliente",["jimmy"],"3 veces al día"],
+  ["nestor","","Absolver consultas de abogados sobre notificaciones en SINOE",["jimmy"],"Diario"],
+  ["alessandra","","Reporte de movimientos en Suprema",["joselin"],"Diario"],
+  ["alessandra","","Registro de nuevas demandas",["brando"],"Diario"],
+  ["alessandra","","Creación de cuadernos incidentales",["brando"],"Diario"],
+  ["alessandra","","Creación de registros en Suprema en CT y MyBig",["brando"],"Diario"],
+  ["alessandra","","Envío de EJEs",["jose","nestor"],"Diario"],
+  ["alessandra","","Reporte de nuevas demandas",["brando"],"Semanal"],
+  ["alessandra","","Identificación de oficios de devolución (Suprema)",["joselin"],"Diario"],
+  ["alessandra","","Actualización de datos en MyBig",["brando"],"Diario"],
+  ["alessandra","","Envío reporte de movimientos extraído de CT",["joselin"],"Diario (mañanas)"],
+  ["brando","","Todas sus funciones",["alessandra"],""],
+  ["jemima","","Todas sus funciones",["nestor"],""],
+  ["joselin","","Todas sus funciones",["jimmy","claudia"],""],
+  ["camila","","Todas sus funciones",["jose"],""],
+  ["claudia","","Todas sus funciones",["joselin","edu"],""],
+  ["jimmy","","Todas sus funciones",["joselin","nestor","claudia"],""],
+  ["edu","","Todas sus funciones",["claudia"],""]
+ ],
+ periodos:[
+  ["edu","2026-03-30","2026-04-08"],["edu","2026-11-23","2026-12-01"],["edu","2026-12-14","2026-12-22"],
+  ["jose","2026-02-23","2026-02-27"],["jose","2026-07-01","2026-07-09"],["jose","2026-07-31","2026-08-12"],["jose","2026-10-01","2026-10-02"],
+  ["alessandra","2026-10-05","2026-10-20"],
+  ["claudia","2025-12-23","2026-01-02"],["claudia","2026-04-13","2026-04-17"],["claudia","2026-06-26","2026-07-03"],["claudia","2026-07-21","2026-07-31"],
+  ["claudia","2026-12-29","2027-01-10","Fecha corregida: el Excel decía 29/12/2027 al 10/01/2026"],["claudia","2027-06-28","2027-07-04"],
+  ["nestor","2026-06-25","2026-06-27"],["nestor","2026-09-14","2026-09-20"],["nestor","2026-11-02","2026-11-09"],
+  ["brando","2026-02-25","2026-03-03"],["brando","2026-07-30","2026-08-10"],["brando","2026-09-22","2026-10-01"],["brando","2026-10-29","2026-10-29"],
+  ["joselin","2026-04-06","2026-04-12"],["joselin","2026-10-27","2026-11-03"],["joselin","2026-11-12","2026-11-18"],
+  ["joselin","2027-01-20","2027-01-28","Fecha corregida: el Excel decía 20/01/2027 al 28/01/2026"],
+  ["jemima","2026-12-01","2026-12-10"]
+ ],
+ reglas:{maxFuera:0,bloqueos:[]}
+};
+function seedDocs(){
+  const eq={},fn={},pe={};
+  Object.entries(SEED.equipo).forEach(([k,v])=>eq[k]={...v});
+  const cnt={};SEED.funciones.forEach(([p,area,tarea,resp,frec])=>{cnt[p]=(cnt[p]||0)+1;fn["f-"+p+"-"+cnt[p]]={persona:p,area,tarea,responsables:resp,frecuencia:frec,orden:cnt[p]}});
+  const c2={};SEED.periodos.forEach(([p,a,b,n])=>{c2[p]=(c2[p]||0)+1;pe["v-"+p+"-"+c2[p]]={persona:p,desde:a,hasta:b,nota:n||""}});
+  return {vac_equipo:eq,vac_funciones:fn,vac_periodos:pe,vac_config:{reglas:JSON.parse(JSON.stringify(SEED.reglas))}};
+}
+
+// ---------- Fechas ----------
+const MS=86400000,pad=n=>String(n).padStart(2,"0");
+const toT=s=>{const [y,m,d]=s.split("-").map(Number);return Date.UTC(y,m-1,d)};
+const toS=t=>{const d=new Date(t);return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate())};
+const addD=(s,n)=>toS(toT(s)+n*MS);
+const dow=s=>new Date(toT(s)).getUTCDay();
+const _n=new Date();const TODAY=_n.getFullYear()+"-"+pad(_n.getMonth()+1)+"-"+pad(_n.getDate());
+const MES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const MESC=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const DIA=["D","L","M","M","J","V","S"];
+const fmt=s=>{if(!s)return"–";const [y,m,d]=s.split("-");return d+"/"+m+"/"+y};
+const fmtC=s=>{const [,m,d]=s.split("-");return Number(d)+" "+MESC[Number(m)-1]};
+const fmtP=s=>{const [,m,d]=s.split("-");return d+"."+m};
+const valid=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||"");
+const FIJOS=["01-01","05-01","06-07","06-29","07-23","07-28","07-29","08-06","08-30","10-08","11-01","12-08","12-09","12-25"];
+const SANTOS={2024:["03-28","03-29"],2025:["04-17","04-18"],2026:["04-02","04-03"],2027:["03-25","03-26"],2028:["04-13","04-14"],2029:["03-29","03-30"],2030:["04-18","04-19"]};
+const FER=new Set();for(let y=2024;y<=2030;y++){FIJOS.forEach(f=>FER.add(y+"-"+f));(SANTOS[y]||[]).forEach(f=>FER.add(y+"-"+f))}
+const isHol=s=>FER.has(s),isWE=s=>{const w=dow(s);return w===0||w===6},isBiz=s=>!isWE(s)&&!isHol(s);
+function days(a,b){const o=[];if(!valid(a)||!valid(b)||a>b)return o;for(let t=toT(a),e=toT(b);t<=e;t+=MS)o.push(toS(t));return o}
+const calDays=(a,b)=>days(a,b).length,bizDays=(a,b)=>days(a,b).filter(isBiz).length;
+function retorno(h){let s=addD(h,1);while(!isBiz(s))s=addD(s,1);return s}
+function ranges(list){const r=[];[...new Set(list)].sort().forEach(d=>{const l=r[r.length-1];if(l&&addD(l[1],1)===d)l[1]=d;else r.push([d,d])});return r}
+const rangeTxt=([a,b])=>a===b?fmtC(a):fmtC(a)+" – "+fmtC(b);
+
+// ---------- Estado ----------
+let people={},funcs={},vacs={},reglas={maxFuera:0,bloqueos:[]};
+let fdb=null,auth=null,demo=false,canWrite=false,A=null;
+let gStart=TODAY.slice(0,7)+"-01",gSpan=3;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+const pname=id=>people[id]?.nombre||"(sin nombre)";
+const order=()=>Object.keys(people).sort((a,b)=>(people[a].orden??99)-(people[b].orden??99)||pname(a).localeCompare(pname(b)));
+const fnsOf=p=>Object.entries(funcs).filter(([,f])=>f.persona===p).map(([id,f])=>({id,...f})).sort((a,b)=>(a.orden??99)-(b.orden??99));
+const resp=f=>(f.responsables||[]).filter(r=>people[r]&&r!==f.persona);
+const reemOf=p=>[...new Set(fnsOf(p).flatMap(resp))];
+const hasCover=p=>fnsOf(p).some(f=>resp(f).length);
+function bloqueoDe(d){return (reglas.bloqueos||[]).find(b=>valid(b.desde)&&valid(b.hasta)&&d>=b.desde&&d<=b.hasta)}
+
+// ---------- Motor de reglas ----------
+// Para cada persona fuera en un día con 2+ fuera: cada función suya necesita al menos un responsable que no esté fuera.
+function uncovered(q,S){
+  const fs=fnsOf(q);
+  if(!fs.length||!fs.some(f=>resp(f).length))return [{tarea:"Sin reemplazo definido",responsables:[]}];
+  return fs.filter(f=>!resp(f).some(r=>!S.has(r)));
+}
+function coverersOf(q,S){const out=new Set();fnsOf(q).forEach(f=>{const a=resp(f).filter(r=>!S.has(r));if(a.length)out.add(a[0])});return out}
+function dayEval(S,d){
+  // devuelve Map persona -> {st:'vac'|'cub'|'con', motivos:[]}
+  const res=new Map();const blo=bloqueoDe(d);const max=Number(reglas.maxFuera)||0;
+  S.forEach(q=>{
+    const mot=[];
+    if(blo)mot.push({tipo:"blo",txt:"Fecha bloqueada"+(blo.motivo?": "+blo.motivo:"")});
+    if(max>0&&S.size>max)mot.push({tipo:"max",txt:"Más de "+max+" persona"+(max>1?"s":"")+" fuera a la vez"});
+    if(S.size>1){const u=uncovered(q,S);if(u.length)mot.push({tipo:"fun",txt:"Sin cubrir: "+u.map(f=>f.tarea).join("; "),fns:u})}
+    res.set(q,{st:mot.length?"con":S.size>1?"cub":"vac",mot});
+  });
+  return res;
+}
+function analyze(vlist){
+  const out=new Map();
+  vlist.forEach(v=>days(v.desde,v.hasta).forEach(d=>{if(!out.has(d))out.set(d,new Set());out.get(d).add(v.persona)}));
+  const evals=new Map();out.forEach((S,d)=>evals.set(d,dayEval(S,d)));
+  const cell=new Map(),per={},load=new Map();
+  vlist.forEach(v=>{
+    const r={st:"ok",conDays:[],cubDays:[],others:new Set(),cubre:new Set(),motivos:new Map()};
+    days(v.desde,v.hasta).forEach(d=>{
+      const S=out.get(d),e=evals.get(d).get(v.persona);
+      S.forEach(o=>{if(o!==v.persona)r.others.add(o)});
+      coverersOf(v.persona,S).forEach(c=>{r.cubre.add(c);const k=c+"|"+d;if(!load.has(k))load.set(k,new Set());load.get(k).add(v.persona)});
+      if(e.st==="con"){r.conDays.push(d);e.mot.forEach(m=>{if(!r.motivos.has(m.txt))r.motivos.set(m.txt,[]);r.motivos.get(m.txt).push(d)})}
+      else if(e.st==="cub")r.cubDays.push(d);
+      cell.set(v.persona+"|"+d,{st:e.st,vid:v.id});
+    });
+    r.st=r.conDays.length?"con":r.cubDays.length?"cub":"ok";per[v.id]=r;
+  });
+  const dbl=[];load.forEach((set,k)=>{if(set.size>1){const [rid,d]=k.split("|");dbl.push({rid,d,ps:[...set].sort()})}});
+  return {out,cell,per,dbl};
+}
+function vlistAll(exclude){return Object.entries(vacs).filter(([id])=>id!==exclude).map(([id,v])=>({id,...v})).filter(v=>people[v.persona]&&valid(v.desde)&&valid(v.hasta)&&v.desde<=v.hasta)}
+const vigentes=vl=>vl.filter(v=>v.hasta>=TODAY);
+
+function verdict(p,a,b,exclude){
+  const res=analyze([...vlistAll(exclude),{id:"__c",persona:p,desde:a,hasta:b}]);
+  const issues=new Map(),cub=new Map();
+  days(a,b).forEach(d=>{
+    const S=res.out.get(d);const ev=dayEval(S,d);
+    ev.forEach((e,q)=>{
+      if(e.st==="con"){if(!issues.has(q))issues.set(q,{ds:[],S:new Set(),mot:new Set()});const o=issues.get(q);o.ds.push(d);S.forEach(s=>{if(s!==q)o.S.add(s)});e.mot.forEach(m=>o.mot.add(m.txt))}
+      else if(q===p&&e.st==="cub"){const by=[...coverersOf(p,S)].map(pname).join(", ");const k=[...S].filter(s=>s!==p).sort().join(",")+"|"+by;if(!cub.has(k))cub.set(k,{ds:[],S:[...S].filter(s=>s!==p),by});cub.get(k).ds.push(d)}
+    });
+  });
+  const otros=vlistAll(exclude).filter(v=>v.persona!==p&&v.desde<=b&&v.hasta>=a).sort((x,y)=>x.desde.localeCompare(y.desde));
+  let h="";
+  if(issues.size){
+    h='<div class="check con"><b>No procede: este periodo genera cruces sin cobertura</b><ul>'+[...issues].map(([q,o])=>'<li><b>'+esc(pname(q))+'</b>'+(q===p?"":" (ya tenía vacaciones)")+" · "+ranges(o.ds).map(rangeTxt).join(", ")+(o.S.size?" · coincide con "+esc([...o.S].map(pname).join(", ")):"")+'<br>'+esc([...o.mot].join(" · "))+'</li>').join("")+'</ul></div>';
+  }else if(cub.size){
+    h='<div class="check cub"><b>Procede con cruce cubierto</b><ul>'+[...cub.values()].map(o=>'<li>'+ranges(o.ds).map(rangeTxt).join(", ")+": coincide con "+esc(o.S.map(pname).join(", "))+". Cubren: "+esc(o.by)+".</li>").join("")+'</ul></div>';
+  }else{
+    h='<div class="check ok"><b>Fechas libres: nadie del equipo está de vacaciones esos días.</b></div>';
+  }
+  if(otros.length)h+='<div class="muted" style="font-size:12.5px;margin-top:8px">Fuera en ese rango: '+otros.map(v=>esc(pname(v.persona))+" ("+fmtC(v.desde)+" – "+fmtC(v.hasta)+")").join(" · ")+'</div>';
+  if(!hasCover(p))h+='<div class="check cub" style="margin-top:8px">'+esc(pname(p))+' no tiene reemplazos definidos, así que no puede cruzarse con nadie.</div>';
+  return {html:h,bad:issues.size>0,clean:!issues.size&&!cub.size,cubre:[...res.per.__c.cubre]};
+}
+
+// ---------- Render ----------
+function renderAll(){
+  A=analyze(vlistAll());
+  qFill();qCheck();renderStats();renderGantt();renderPer();renderIssues();renderCrit();
+  $("btnNew").hidden=!canWrite;$("btnAddP").hidden=!canWrite;
+  $("tab-cri").firstChild.textContent=canWrite?"Criterios y reemplazos":"Quién cubre a quién";
+  $("qT").textContent=canWrite?"Consultar fecha tentativa":"Prueba tus fechas";
+  $("qHint").textContent=canWrite?"Revisa unas fechas antes de registrarlas. No se guarda nada hasta que presionas “Registrar este periodo”.":"Elige tu nombre y unas fechas tentativas: te dice si están libres, con quién se cruzan y si tendrías cobertura. No se guarda nada; las vacaciones las registra Edu.";
+  $("btnExport").hidden=!canWrite;
+}
+function renderStats(){
+  const hoy=A.out.get(TODAY);const hs=hoy?[...hoy]:[];
+  $("stHoy").textContent=hs.length;$("stHoyD").textContent=hs.length?hs.map(pname).join(", "):"Todo el equipo trabajando";
+  const lim=addD(TODAY,30);const prox=vlistAll().filter(v=>v.desde>TODAY&&v.desde<=lim).sort((a,b)=>a.desde.localeCompare(b.desde));
+  $("stProx").textContent=prox.length;$("stProxD").textContent=prox.slice(0,3).map(v=>pname(v.persona)+" "+fmtC(v.desde)).join(" · ")||"Ninguna";
+  const con=vigentes(vlistAll()).filter(v=>A.per[v.id].st==="con");
+  $("stCon").textContent=con.length;$("stConD").textContent=con.length?"Periodos vigentes o futuros":"Sin cruces pendientes";$("stConBox").className="stat "+(con.length?"bad":"ok");
+  const sin=order().filter(p=>!hasCover(p));
+  $("stSin").textContent=sin.length;$("stSinD").textContent=sin.length?sin.map(pname).join(", "):"Todos tienen reemplazo";$("stSinBox").className="stat "+(sin.length?"bad":"ok");
+  $("tabCnt").textContent=con.length;$("tabCnt").hidden=!con.length;
+}
+function monthAdd(s,n){const [y,m]=s.split("-").map(Number);return toS(Date.UTC(y,m-1+n,1))}
+function renderGantt(){
+  const minStart=TODAY.slice(0,7)+"-01";if(gStart<minStart)gStart=minStart;
+  $("gPrev").disabled=gStart<=minStart;
+  const end=addD(monthAdd(gStart,gSpan),-1),ds=days(gStart,end);
+  const [y1,m1]=gStart.split("-").map(Number),[y2,m2]=end.split("-").map(Number);
+  $("gRange").textContent=gSpan===1?MES[m1-1]+" "+y1:MESC[m1-1]+" "+y1+" – "+MESC[m2-1]+" "+y2;
+  const cw=gSpan===1?"minmax(26px,1fr)":gSpan===3?"minmax(15px,1fr)":"minmax(9px,1fr)";
+  const g=$("gantt");g.style.gridTemplateColumns="150px repeat("+ds.length+","+cw+")";
+  let h='<div class="nm" style="border-bottom:0"></div>';
+  let i=0;while(i<ds.length){const mk=ds[i].slice(0,7);let j=i;while(j<ds.length&&ds[j].slice(0,7)===mk)j++;const [yy,mm]=mk.split("-").map(Number);h+='<div class="mh" style="grid-column:span '+(j-i)+'">'+MES[mm-1]+" "+yy+'</div>';i=j}
+  h+='<div class="nm" style="font-size:11px;color:var(--muted);font-weight:400">Persona</div>';
+  ds.forEach(d=>{h+='<div class="dh'+(d===TODAY?" td":"")+'">'+(gSpan<6?DIA[dow(d)]+"<br>":"")+Number(d.slice(8))+'</div>'});
+  order().forEach(pid=>{
+    h+='<div class="nm" title="'+esc(pname(pid))+'">'+esc(pname(pid))+'</div>';
+    ds.forEach((d,k)=>{
+      const blo=bloqueoDe(d);
+      const c=(isWE(d)?" we":"")+(isHol(d)?" ho":"")+(blo?" bl":"")+(d.endsWith("-01")?" m1":"")+(d===TODAY?" td":"");
+      const x=(d>=TODAY||true)?A.cell.get(pid+"|"+d):null;let b="",tt=isHol(d)?"Feriado":blo?"Bloqueado"+(blo.motivo?": "+blo.motivo:""):"";
+      if(x){const v=vacs[x.vid];if(v&&v.hasta>=TODAY){
+        const cls=x.st==="vac"?"vac":x.st==="cub"?"cub":"con";
+        const st=(d===v.desde||k===0)?" st":"",en=(d===v.hasta||k===ds.length-1)?" en":"";
+        const tip=pname(pid)+": "+fmt(v.desde)+" al "+fmt(v.hasta)+(x.st==="con"?" · cruce sin cobertura":x.st==="cub"?" · cruce cubierto":"");
+        b='<div class="b '+cls+st+en+'" data-vid="'+esc(x.vid)+'" title="'+esc(tip)+'"></div>'}}
+      h+='<div class="c'+c+'"'+(tt?' title="'+esc(tt)+'"':"")+'>'+b+'</div>';
+    });
+  });
+  g.innerHTML=h;
+}
+function stPill(st,v){if(v.desde<=TODAY&&v.hasta>=TODAY&&st==="ok")return'<span class="pill now">En curso</span>';return st==="con"?'<span class="pill con">Sin cobertura</span>':st==="cub"?'<span class="pill cub">Cruce cubierto</span>':'<span class="pill ok">Sin cruce</span>'}
+function renderPer(){
+  const fp=$("fPer"),cur=fp.value;
+  fp.innerHTML='<option value="">Todas las personas</option>'+order().map(p=>'<option value="'+esc(p)+'">'+esc(pname(p))+'</option>').join("");fp.value=people[cur]?cur:"";
+  const fe=$("fEst").value;
+  const rows=vigentes(vlistAll()).filter(v=>(!fp.value||v.persona===fp.value)&&(!fe||A.per[v.id].st===fe)).sort((a,b)=>a.desde.localeCompare(b.desde));
+  $("perBody").innerHTML=rows.map(v=>{const r=A.per[v.id];
+    const cub=[...r.cubre].map(pname).join(", ")||'<span class="muted">'+(hasCover(v.persona)?"Nadie disponible":"Sin reemplazo")+'</span>';
+    return '<tr><td><b style="font-weight:500">'+esc(pname(v.persona))+'</b>'+(v.nota?'<div class="muted" style="font-size:11.5px">'+esc(v.nota)+'</div>':"")+'</td><td class="num">'+fmt(v.desde)+'</td><td class="num">'+fmt(v.hasta)+'</td><td class="num">'+fmt(retorno(v.hasta))+'</td><td class="r num">'+calDays(v.desde,v.hasta)+'</td><td class="r num">'+bizDays(v.desde,v.hasta)+'</td><td>'+cub+'</td><td>'+stPill(r.st,v)+'</td><td class="r" style="white-space:nowrap"><button class="btn sm" type="button" data-memo="'+esc(v.id)+'">Memo</button> '+(canWrite?'<button class="btn sm" type="button" data-edit="'+esc(v.id)+'">Editar</button>':"")+'</td></tr>'}).join("")||'<tr><td colspan="9"><div class="empty">No hay periodos vigentes o futuros con estos filtros.</div></td></tr>';
+}
+function renderIssues(){
+  const list=vigentes(vlistAll()).filter(v=>A.per[v.id].st==="con").sort((a,b)=>a.desde.localeCompare(b.desde));
+  let h=list.map(v=>{const r=A.per[v.id];
+    return '<div class="issue con"><div class="t"><b>'+esc(pname(v.persona))+" · "+ranges(r.conDays).map(rangeTxt).join(", ")+'</b>'+(r.others.size?"Coincide con "+esc([...r.others].map(pname).join(", "))+".":"")+'<ul>'+[...r.motivos].map(([m,ds])=>'<li>'+esc(m)+' <span class="muted">('+ranges(ds).map(rangeTxt).join(", ")+')</span></li>').join("")+'</ul></div>'+(canWrite?'<button class="btn sm" type="button" data-edit="'+esc(v.id)+'">Revisar</button>':"")+'</div>'}).join("");
+  const dbl=A.dbl.filter(x=>x.d>=TODAY);
+  if(dbl.length){const g=new Map();dbl.forEach(x=>{const k=x.rid+"|"+x.ps.join(",");if(!g.has(k))g.set(k,{rid:x.rid,ps:x.ps,ds:[]});g.get(k).ds.push(x.d)});
+    g.forEach(x=>{h+='<div class="issue avi"><div class="t"><b>Aviso · '+esc(pname(x.rid))+' cubre a '+x.ps.length+' personas a la vez</b>'+esc(x.ps.map(pname).join(" y "))+" · "+ranges(x.ds).map(rangeTxt).join(", ")+'. Está permitido, pero revisa la carga.</div></div>'})}
+  $("issues").innerHTML=h||'<div class="empty">No hay cruces sin cobertura en periodos vigentes o futuros.</div>';
+}
+let pendingDel=null;
+function renderCrit(){
+  const ae=document.activeElement,fid=ae&&ae.id,selS=ae&&ae.selectionStart;
+  const dis=canWrite?"":" disabled";
+  // reglas generales
+  const bl=(reglas.bloqueos||[]);
+  $("gen").innerHTML='<div class="box"><h3>Máximo de personas fuera a la vez</h3><span class="muted" style="font-size:12.5px">0 = sin límite (manda la regla de reemplazos).</span><input type="number" min="0" max="10" id="gMax" value="'+(Number(reglas.maxFuera)||0)+'" style="width:90px"'+dis+'></div>'+
+    '<div class="box"><h3>Fechas bloqueadas</h3><span class="muted" style="font-size:12.5px">Rangos donde nadie puede salir (cierres, auditorías, entregas).</span>'+
+    (bl.length?'<table><tbody>'+bl.map((b,i)=>'<tr><td class="num">'+fmt(b.desde)+' – '+fmt(b.hasta)+'</td><td>'+esc(b.motivo||"")+'</td><td class="r">'+(canWrite?'<button class="btn sm danger" type="button" data-delb="'+i+'">Quitar</button>':"")+'</td></tr>').join("")+'</tbody></table>':'<span class="muted">Ninguna.</span>')+
+    (canWrite?'<div class="sugs"><input type="date" id="bD" aria-label="Desde"><input type="date" id="bH" aria-label="Hasta"><input type="text" id="bM" placeholder="Motivo" style="flex:1;min-width:120px"><button class="btn sm" type="button" id="bAdd">Agregar</button></div>':"")+'</div>';
+  // por persona
+  const yr=TODAY.slice(0,4),ids=order();
+  $("people").innerHTML=ids.map(pid=>{
+    const p=people[pid],fs=fnsOf(pid);
+    let used=0,chicos=0;vlistAll().filter(v=>v.persona===pid).forEach(v=>{days(v.desde,v.hasta).forEach(d=>{if(d.startsWith(yr))used++});if(v.desde.startsWith(yr)&&calDays(v.desde,v.hasta)<7)chicos+=calDays(v.desde,v.hasta)});
+    const cubreA=ids.filter(o=>o!==pid&&reemOf(o).includes(pid)).map(pname);
+    const rows=fs.map(f=>'<tr><td style="width:24%"><input type="text" id="fa-'+esc(f.id)+'" data-fn="'+esc(f.id)+'" data-k="area" value="'+esc(f.area||"")+'" placeholder="Área / cliente"'+dis+'></td><td style="width:34%"><input type="text" id="ft-'+esc(f.id)+'" data-fn="'+esc(f.id)+'" data-k="tarea" value="'+esc(f.tarea||"")+'" placeholder="Función o pendiente"'+dis+'></td><td><div class="chips">'+ids.filter(o=>o!==pid).map(o=>'<button type="button" class="chip" data-fc="'+esc(f.id)+'" data-o="'+esc(o)+'" aria-pressed="'+(f.responsables||[]).includes(o)+'"'+dis+'>'+esc(pname(o))+'</button>').join("")+'</div></td><td style="width:16%"><input type="text" id="ff-'+esc(f.id)+'" data-fn="'+esc(f.id)+'" data-k="frecuencia" value="'+esc(f.frecuencia||"")+'" placeholder="Frecuencia"'+dis+'></td><td class="r">'+(canWrite?'<button class="btn sm danger" type="button" data-delf="'+esc(f.id)+'" aria-label="Quitar función">✕</button>':"")+'</td></tr>').join("");
+    return '<div class="person"><div class="person-h">'+
+      (canWrite?'<input type="text" id="pn-'+esc(pid)+'" data-p="'+esc(pid)+'" data-k="nombre" value="'+esc(p.nombre)+'" aria-label="Nombre">':'<span class="nmi">'+esc(p.nombre)+'</span>')+
+      '<span class="meta">'+(canWrite?'Ingreso <input type="date" id="pi-'+esc(pid)+'" data-p="'+esc(pid)+'" data-k="ingreso" value="'+esc(p.ingreso||"")+'"> · ':(p.ingreso?"Ingreso "+fmt(p.ingreso)+" · ":""))+
+      'Días '+yr+': <b class="num">'+used+'</b>/30 · Bloques &lt;7 días: <b class="num" style="color:'+(chicos>15?"var(--red)":"inherit")+'">'+chicos+'</b>/15'+(cubreA.length?' · Cubre a: '+esc(cubreA.join(", ")):"")+(p.notas?' · <span class="pill now">'+esc(p.notas)+'</span>':"")+'</span>'+
+      (hasCover(pid)?"":'<span class="pill con">Sin reemplazo</span>')+
+      (canWrite?'<button class="btn sm" type="button" data-addf="'+esc(pid)+'">+ Función</button><button class="btn sm danger" type="button" data-delp="'+esc(pid)+'">'+(pendingDel===pid?"Confirmar: borra persona, funciones y periodos":"Eliminar persona")+'</button>':"")+
+      '</div><div class="tscroll"><table class="ftable wide"><thead><tr><th>Área / Cliente</th><th>Función</th><th>La cubre (basta uno)</th><th>Frecuencia</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="muted">Sin funciones registradas. '+(canWrite?"Agrega una con “+ Función”.":"")+'</td></tr>')+'</tbody></table></div></div>';
+  }).join("")||'<div class="empty">Sin personas todavía.</div>';
+  if(fid&&$(fid)){$(fid).focus();try{if(selS!=null)$(fid).setSelectionRange(selS,selS)}catch(e){}}
+}
+
+// ---------- Consulta rápida ----------
+function qFill(){const s=$("qP"),cur=s.value;s.innerHTML='<option value="">Elige…</option>'+order().map(p=>'<option value="'+esc(p)+'">'+esc(pname(p))+'</option>').join("");s.value=people[cur]?cur:""}
+function qCheck(){
+  const p=$("qP").value,a=$("qD").value,b=$("qH").value;
+  const idle='<div class="check idle">Elige una persona y un rango de fechas para ver si se cruza con alguien.</div>';
+  if(!p||!valid(a)||!valid(b)){$("qCalc").innerHTML="";$("qActs").hidden=true;$("qRes").innerHTML=idle;return}
+  if(a>b){$("qCalc").innerHTML="";$("qActs").hidden=true;$("qRes").innerHTML='<div class="check con"><b>La fecha “Hasta” es anterior a “Desde”.</b></div>';return}
+  $("qCalc").innerHTML='<b>'+calDays(a,b)+'</b> días calendario · <b>'+bizDays(a,b)+'</b> hábiles · retorna <b>'+fmt(retorno(b))+'</b>';
+  const same=Object.entries(vacs).find(([,v])=>v.persona===p&&v.desde===a&&v.hasta===b);
+  const r=verdict(p,a,b,same?same[0]:null);
+  $("qRes").innerHTML=(a<TODAY?'<div class="check cub" style="margin-bottom:8px">Ojo: la fecha de inicio ya pasó.</div>':"")+r.html+(r.cubre.length&&!r.bad?'<div class="muted" style="font-size:12.5px;margin-top:6px">La cubrirían: '+esc(r.cubre.map(pname).join(", "))+'</div>':"");
+  $("qActs").hidden=false;$("qReg").hidden=!canWrite||!!same;
+}
+function findFree(p,from,L,exclude){
+  let s=from<TODAY?addD(TODAY,1):from;const res=[];let g=0;
+  while(res.length<4&&g<400){g++;if(!isBiz(s)){s=addD(s,1);continue}const e=addD(s,L-1);const r=verdict(p,s,e,exclude);if(r.clean){res.push([s,e]);s=addD(e,1)}else s=addD(s,1)}
+  return res;
+}
+function qSuggest(){
+  const p=$("qP").value,a=$("qD").value,b=$("qH").value;if(!p||!valid(a)||!valid(b)||a>b)return;
+  const res=findFree(p,a,calDays(a,b),null);
+  $("qSugs").innerHTML=res.length?'<span class="muted">Libres:</span>'+res.map(([x,y])=>'<button type="button" class="btn sm" data-qa="'+x+'" data-qb="'+y+'">'+fmtC(x)+" – "+fmtC(y)+" "+x.slice(0,4)+'</button>').join(""):'<span class="muted">No encontré ventanas libres en el próximo año.</span>';
+}
+
+// ---------- Escritura ----------
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2800)}
+const COLS={vac_equipo:()=>people,vac_funciones:()=>funcs,vac_periodos:()=>vacs};
+async function put(col,id,data){
+  if(col==="vac_config")reglas=data;else COLS[col]()[id]=data;renderAll();
+  if(!fdb)return;try{await fdb.collection(col).doc(id).set(data)}catch(e){toast(e&&e.code==="permission-denied"?"Tu cuenta no tiene permiso para editar.":"No se pudo guardar. Revisa tu conexión.")}
+}
+async function del(col,id){
+  delete COLS[col]()[id];renderAll();
+  if(!fdb)return;try{await fdb.collection(col).doc(id).delete()}catch(e){toast("No se pudo eliminar.")}
+}
+const newId=p=>p+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+// ---------- Formulario periodo ----------
+let editing=null,lastBad=false;
+function openForm(vid,preset){
+  if(!canWrite)return;
+  editing=vid||null;const v=vid?vacs[vid]:null;
+  $("fTitle").textContent=v?"Editar vacaciones":"Registrar vacaciones";
+  $("fP").innerHTML=order().map(p=>'<option value="'+esc(p)+'">'+esc(pname(p))+'</option>').join("");
+  $("fP").value=v?.persona||preset?.persona||order()[0]||"";
+  $("fD").value=v?.desde||preset?.desde||"";$("fH").value=v?.hasta||preset?.hasta||"";$("fN").value=v?.nota||"";
+  $("fDel").hidden=!v;$("fMemo").hidden=!v;$("fDel").textContent="Eliminar";$("fDel").dataset.armed="";$("fAck").checked=false;
+  $("ov").hidden=false;check();setTimeout(()=>$("fP").focus(),0);
+}
+function closeForm(){$("ov").hidden=true;editing=null}
+function check(){
+  const p=$("fP").value,a=$("fD").value,b=$("fH").value;const ok=p&&valid(a)&&valid(b)&&a<=b;
+  $("cCal").textContent=ok?calDays(a,b):"–";$("cHab").textContent=ok?bizDays(a,b):"–";$("cRet").textContent=ok?fmt(retorno(b)):"–";
+  if(valid(a)&&valid(b)&&a>b){$("fCheck").innerHTML='<div class="check con"><b>La fecha “Hasta” es anterior a “Desde”.</b></div>';lastBad=true;$("fAckL").hidden=true;$("fSave").disabled=true;return}
+  if(!ok){$("fCheck").innerHTML="";lastBad=false;$("fAckL").hidden=true;$("fSave").disabled=true;return}
+  const r=verdict(p,a,b,editing);$("fCheck").innerHTML=r.html;lastBad=r.bad;
+  $("fAckL").hidden=!r.bad;$("fSave").disabled=r.bad&&!$("fAck").checked;$("fSave").textContent=r.bad?"Guardar con cruce":"Guardar";
+}
+
+// ---------- Memo ----------
+function memoHTML(vid){
+  const v=vacs[vid];const fs=fnsOf(v.persona);
+  const S=new Set();days(v.desde,v.hasta).forEach(d=>{const o=A.out.get(d);if(o)o.forEach(x=>S.add(x))});
+  const td='style="border:1px solid #999;padding:3px 6px;font-size:12px"',th='style="border:1px solid #999;padding:3px 6px;font-size:12px;background:#dbe5f1;font-weight:bold;text-align:center"';
+  const rows=fs.map(f=>{const rs=resp(f);const fuera=rs.filter(r=>r!==v.persona&&S.has(r)&&vlistAll().some(x=>x.persona===r&&x.desde<=v.hasta&&x.hasta>=v.desde));
+    return '<tr><td '+td+'>'+esc(f.area||"")+'</td><td '+td+'>'+esc(f.tarea)+'</td><td '+td+'>'+esc(rs.map(pname).join(" / "))+(fuera.length?' <span style="color:#c00">(revisar: '+esc(fuera.map(pname).join(", "))+' también sale)</span>':"")+'</td><td '+td+'>'+esc(f.frecuencia||"")+'</td></tr>'}).join("");
+  return '<p>Estimados,</p><p>Remito mi memo durante los días que estaré de vacaciones ('+fmtP(v.desde)+' al '+fmtP(v.hasta)+') retornando el '+fmtP(retorno(v.hasta))+'.</p>'+
+    '<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif"><thead><tr><th '+th+'>Área/Cliente</th><th '+th+'>Pendiente</th><th '+th+'>A cargo</th><th '+th+'>Fecha/Hora</th></tr></thead><tbody>'+(rows||'<tr><td '+td+' colspan="4">Sin funciones registradas</td></tr>')+'</tbody></table><p>Saludos,</p>';
+}
+function memoText(vid){const v=vacs[vid];return "Estimados,\n\nRemito mi memo durante los días que estaré de vacaciones ("+fmtP(v.desde)+" al "+fmtP(v.hasta)+") retornando el "+fmtP(retorno(v.hasta))+".\n\n"+fnsOf(v.persona).map(f=>[f.area,f.tarea,resp(f).map(pname).join(" / "),f.frecuencia].join("\t")).join("\n")+"\n\nSaludos,"}
+let memoVid=null;
+function openMemo(vid){memoVid=vid;$("memoBox").innerHTML=memoHTML(vid);$("ovMemo").hidden=false}
+async function copyMemo(){
+  const html=memoHTML(memoVid),txt=memoText(memoVid);
+  try{
+    if(window.ClipboardItem){await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([txt],{type:"text/plain"})})])}
+    else await navigator.clipboard.writeText(txt);
+    toast("Memo copiado");
+  }catch(e){const r=document.createRange();r.selectNodeContents($("memoBox"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selecciona y copia con Ctrl+C")}
+}
+
+// ---------- Exportar ----------
+function exportX(){
+  if(typeof XLSX==="undefined"){toast("No se pudo cargar el generador de Excel.");return}
+  const vl=vigentes(vlistAll()).sort((a,b)=>a.desde.localeCompare(b.desde));
+  const P=vl.map(v=>{const r=A.per[v.id];return{"Persona":pname(v.persona),"Desde":fmt(v.desde),"Hasta":fmt(v.hasta),"Retorno":fmt(retorno(v.hasta)),"Calendario":calDays(v.desde,v.hasta),"Hábiles":bizDays(v.desde,v.hasta),"Lo cubren":[...r.cubre].map(pname).join(", "),"Estado":r.st==="con"?"Sin cobertura":r.st==="cub"?"Cruce cubierto":"Sin cruce","Nota":v.nota||""}});
+  const F=[];order().forEach(p=>fnsOf(p).forEach(f=>F.push({"Persona":pname(p),"Área/Cliente":f.area||"","Función":f.tarea,"La cubre":resp(f).map(pname).join(" / "),"Frecuencia":f.frecuencia||""})));
+  const H=vlistAll().sort((a,b)=>pname(a.persona).localeCompare(pname(b.persona))||a.desde.localeCompare(b.desde)).map(v=>({"Persona":pname(v.persona),"Desde":fmt(v.desde),"Hasta":fmt(v.hasta),"Calendario":calDays(v.desde,v.hasta),"Hábiles":bizDays(v.desde,v.hasta)}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(P.length?P:[{"Persona":"Sin periodos vigentes"}]),"Vigentes y futuros");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(F),"Funciones y reemplazos");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(H),"Historial completo");
+  XLSX.writeFile(wb,"vacaciones_paralegal_procesal_"+TODAY+".xlsx");
+}
+
+// ---------- Eventos ----------
+function setTab(t){["cal","per","con","cri"].forEach(k=>{$("tab-"+k).setAttribute("aria-selected",k===t);$("view-"+k).hidden=k!==t});try{localStorage.setItem("vac-tab",t)}catch(e){}}
+["cal","per","con","cri"].forEach(k=>$("tab-"+k).addEventListener("click",()=>setTab(k)));
+try{const t=localStorage.getItem("vac-tab");if(t&&$("tab-"+t))setTab(t)}catch(e){}
+$("gPrev").onclick=()=>{gStart=monthAdd(gStart,-1);renderGantt()};
+$("gNext").onclick=()=>{gStart=monthAdd(gStart,1);renderGantt()};
+$("gToday").onclick=()=>{gStart=TODAY.slice(0,7)+"-01";renderGantt()};
+$("gSpan").onchange=e=>{gSpan=Number(e.target.value);renderGantt()};
+$("gantt").addEventListener("click",e=>{const b=e.target.closest("[data-vid]");if(!b)return;if(canWrite)openForm(b.dataset.vid);else openMemo(b.dataset.vid)});
+["fPer","fEst"].forEach(id=>$(id).addEventListener("change",renderPer));
+["qP","qD","qH"].forEach(id=>$(id).addEventListener("input",()=>{$("qSugs").innerHTML="";qCheck()}));
+$("qD").addEventListener("change",()=>{if(valid($("qD").value)&&(!valid($("qH").value)||$("qH").value<$("qD").value))$("qH").value=addD($("qD").value,6);$("qSugs").innerHTML="";qCheck()});
+$("qSug").onclick=qSuggest;
+$("qReg").onclick=()=>openForm(null,{persona:$("qP").value,desde:$("qD").value,hasta:$("qH").value});
+$("qSugs").addEventListener("click",e=>{const b=e.target.closest("[data-qa]");if(b){$("qD").value=b.dataset.qa;$("qH").value=b.dataset.qb;qCheck()}});
+
+document.addEventListener("click",e=>{
+  const t=e.target;
+  const ed=t.closest("[data-edit]");if(ed){openForm(ed.dataset.edit);return}
+  const mm=t.closest("[data-memo]");if(mm){openMemo(mm.dataset.memo);return}
+  if(!canWrite)return;
+  const ch=t.closest("[data-fc]");if(ch){const f=funcs[ch.dataset.fc],o=ch.dataset.o;const cur=f.responsables||[];put("vac_funciones",ch.dataset.fc,{...f,responsables:cur.includes(o)?cur.filter(x=>x!==o):[...cur,o]});return}
+  const af=t.closest("[data-addf]");if(af){const p=af.dataset.addf;const id=newId("f-"+p);const mx=Math.max(0,...fnsOf(p).map(f=>f.orden||0));put("vac_funciones",id,{persona:p,area:"",tarea:"",responsables:[],frecuencia:"",orden:mx+1});setTimeout(()=>$("ft-"+id)?.focus(),30);return}
+  const df=t.closest("[data-delf]");if(df){del("vac_funciones",df.dataset.delf);return}
+  const db_=t.closest("[data-delb]");if(db_){const bl=[...(reglas.bloqueos||[])];bl.splice(Number(db_.dataset.delb),1);put("vac_config","reglas",{...reglas,bloqueos:bl});return}
+  if(t.id==="bAdd"){const a=$("bD").value,b=$("bH").value;if(!valid(a)||!valid(b)||a>b){toast("Revisa las fechas del bloqueo");return}put("vac_config","reglas",{...reglas,bloqueos:[...(reglas.bloqueos||[]),{desde:a,hasta:b,motivo:$("bM").value.trim()}]});return}
+  const dp=t.closest("[data-delp]");if(dp){const p=dp.dataset.delp;if(pendingDel!==p){pendingDel=p;renderCrit();return}pendingDel=null;
+    Object.entries(vacs).filter(([,v])=>v.persona===p).forEach(([id])=>del("vac_periodos",id));
+    Object.entries(funcs).forEach(([id,f])=>{if(f.persona===p)del("vac_funciones",id);else if((f.responsables||[]).includes(p))put("vac_funciones",id,{...f,responsables:f.responsables.filter(x=>x!==p)})});
+    del("vac_equipo",p);toast("Persona eliminada");return}
+});
+document.addEventListener("change",e=>{
+  if(!canWrite)return;const t=e.target;
+  if(t.dataset.fn){const f=funcs[t.dataset.fn];if(f&&f[t.dataset.k]!==t.value.trim())put("vac_funciones",t.dataset.fn,{...f,[t.dataset.k]:t.value.trim()});return}
+  if(t.dataset.p){const p=people[t.dataset.p];let v=t.value.trim();if(t.dataset.k==="nombre"&&!v){t.value=p.nombre;return}if(p&&p[t.dataset.k]!==v)put("vac_equipo",t.dataset.p,{...p,[t.dataset.k]:v});return}
+  if(t.id==="gMax"){put("vac_config","reglas",{...reglas,maxFuera:Math.max(0,Number(t.value)||0)})}
+});
+$("btnAddP").onclick=()=>{const id=newId("p");const mx=Math.max(0,...Object.values(people).map(p=>p.orden||0));put("vac_equipo",id,{nombre:"Nueva persona",ingreso:"",notas:"",orden:mx+1});setTimeout(()=>{const n=$("pn-"+id);if(n){n.focus();n.select()}},50)};
+$("btnNew").onclick=()=>openForm(null);
+$("btnExport").onclick=exportX;
+["fP","fD","fH"].forEach(id=>$(id).addEventListener("input",check));
+$("fD").addEventListener("change",()=>{if(valid($("fD").value)&&(!valid($("fH").value)||$("fH").value<$("fD").value))$("fH").value=addD($("fD").value,6);check()});
+$("fAck").onchange=check;
+$("fClose").onclick=closeForm;$("fCancel").onclick=closeForm;
+$("fMemo").onclick=()=>{const id=editing;closeForm();openMemo(id)};
+$("fDel").onclick=()=>{const b=$("fDel");if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Confirmar eliminación";return}del("vac_periodos",editing);closeForm();toast("Periodo eliminado")};
+$("form").addEventListener("submit",e=>{e.preventDefault();if($("fSave").disabled)return;
+  const id=editing||newId("v");put("vac_periodos",id,{persona:$("fP").value,desde:$("fD").value,hasta:$("fH").value,nota:$("fN").value.trim()});closeForm();toast(lastBad?"Guardado con cruce sin cobertura":"Vacaciones guardadas")});
+$("mClose").onclick=()=>$("ovMemo").hidden=true;$("mCopy").onclick=copyMemo;
+["ov","ovMemo","ovLogin"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id)){$(id).hidden=true;if(id==="ov")editing=null}}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")["ov","ovMemo","ovLogin"].forEach(id=>$(id).hidden=true)});
+$("lClose").onclick=()=>$("ovLogin").hidden=true;
+$("btnLogin").onclick=()=>{if(demo){$("btnDemoSw")?.click();return}$("lErr").hidden=true;$("ovLogin").hidden=false;$("lEmail").value=EDITOR_EMAIL;setTimeout(()=>$("lPass").focus(),0)};
+$("btnLogout").onclick=()=>auth&&auth.signOut();
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();
+  try{await auth.signInWithEmailAndPassword($("lEmail").value.trim(),$("lPass").value);$("ovLogin").hidden=true;$("lPass").value=""}
+  catch(err){$("lErr").textContent="No se pudo ingresar: revisa el correo y la contraseña.";$("lErr").hidden=false}});
+
+// ---------- Arranque ----------
+$("build").textContent=BUILD;
+function banner(html){$("banner").innerHTML=html;$("banner").hidden=!html}
+function loadSeedLocal(){const s=seedDocs();people=s.vac_equipo;funcs=s.vac_funciones;vacs=s.vac_periodos;reglas=s.vac_config.reglas}
+async function seedFirestore(){
+  const s=seedDocs();const b=fdb.batch();
+  Object.entries(s).forEach(([col,docs])=>Object.entries(docs).forEach(([id,d])=>b.set(fdb.collection(col).doc(id),d)));
+  try{await b.commit();toast("Datos iniciales cargados");banner("")}catch(e){toast("No se pudieron cargar: revisa las reglas de Firestore.")}
+}
+let loaded={eq:false,fn:false,pe:false};
+function maybeSeedBanner(){
+  if(loaded.eq&&loaded.fn&&loaded.pe&&!Object.keys(people).length){
+    banner(canWrite?'La base está vacía. <button class="btn sm primary" type="button" id="btnSeed">Cargar datos iniciales</button>':"La plataforma aún no tiene datos. El responsable debe cargarlos.");
+    const bs=$("btnSeed");if(bs)bs.onclick=seedFirestore;
+  }else if($("btnSeed"))banner("");
+}
+const configured=!Object.values(FIREBASE_CONFIG).some(v=>String(v).includes("PEGA_AQUI"));
+if(!configured||typeof firebase==="undefined"){
+  demo=true;canWrite=false;loadSeedLocal();
+  const demoBanner=()=>{banner("Modo demostración (falta el firebaseConfig; nada se guarda). Estás viendo la vista "+(canWrite?"de <b>Edu</b>":"del <b>equipo</b>")+'. <button class="btn sm" type="button" id="btnDemoSw">Ver como '+(canWrite?"equipo":"Edu")+'</button>');
+    $("btnDemoSw").onclick=()=>{canWrite=!canWrite;$("who").textContent=canWrite?"Demo · Edu":"Demo · equipo";$("btnLogin").hidden=canWrite;demoBanner();renderAll()}};
+  $("who").textContent="Demo · equipo";demoBanner();renderAll();
+}else{
+  firebase.initializeApp(FIREBASE_CONFIG);
+  fdb=firebase.firestore();auth=firebase.auth();
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+  auth.onAuthStateChanged(u=>{
+    canWrite=!!u&&(u.email||"").toLowerCase()===EDITOR_EMAIL;
+    $("btnLogin").hidden=!!u;$("btnLogout").hidden=!u;
+    $("who").textContent=u?(canWrite?"Editor: ":"Solo lectura: ")+u.email:"";
+    if(u&&!canWrite)toast("Esta cuenta solo puede consultar.");
+    renderAll();maybeSeedBanner();
+  });
+  const onErr=e=>banner("No se pudo leer la base de datos ("+(e&&e.code||"error")+"). Revisa las reglas de Firestore.");
+  fdb.collection("vac_equipo").onSnapshot(s=>{const o={};s.forEach(d=>o[d.id]=d.data());people=o;loaded.eq=true;renderAll();maybeSeedBanner()},onErr);
+  fdb.collection("vac_funciones").onSnapshot(s=>{const o={};s.forEach(d=>o[d.id]=d.data());funcs=o;loaded.fn=true;renderAll();maybeSeedBanner()},onErr);
+  fdb.collection("vac_periodos").onSnapshot(s=>{const o={};s.forEach(d=>o[d.id]=d.data());vacs=o;loaded.pe=true;renderAll();maybeSeedBanner()},onErr);
+  fdb.collection("vac_config").doc("reglas").onSnapshot(d=>{reglas=d.exists?d.data():{maxFuera:0,bloqueos:[]};renderAll()},()=>{});
+  renderAll();
+}
+})();
+</script>
+</body>
+</html>
